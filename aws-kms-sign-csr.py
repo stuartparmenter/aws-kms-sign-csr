@@ -34,16 +34,18 @@ def output_csr(csr):
    print(end_marker)
 
 def signing_algorithm(hashalgo):
-   if hashalgo == 'rsasha512': # szOID_RSA_SHA512RSA
-      return 'RSASSA_PKCS1_V1_5_SHA_512', '1.2.840.113549.1.1.13', 'sha512'
-   elif hashalgo == 'rsasha256': # szOID_RSA_SHA256RSA
-      return 'RSASSA_PKCS1_V1_5_SHA_256', '1.2.840.113549.1.1.11', 'sha256'
-   elif hashalgo == 'ecsha256': # szOID_ECDSA_SHA256
-      return 'ECDSA_SHA_256', '1.2.840.10045.4.3.2', 'sha256'
-   elif hashalgo == 'ecsha384': # szOID_ECDSA_SHA384
-      return 'ECDSA_SHA_384', '1.2.840.10045.4.3.3', 'sha384'
-   else:
-      raise Exception('unknown hash algorithm, please specify either sha256 or sha512')
+   supported_algos = {
+      'rsa-sha256':   ('RSASSA_PKCS1_V1_5_SHA_256', '1.2.840.113549.1.1.11', 'sha256'),
+      'rsa-sha512':   ('RSASSA_PKCS1_V1_5_SHA_512', '1.2.840.113549.1.1.13', 'sha512'),
+      'ecdsa-sha256': ('ECDSA_SHA_256', '1.2.840.10045.4.3.2', 'sha256'),
+      'ecdsa-sha384': ('ECDSA_SHA_384', '1.2.840.10045.4.3.3', 'sha384'),
+      'ecdsa-sha512': ('ECDSA_SHA_512', '1.2.840.10045.4.3.4', 'sha512')
+   }
+
+   try:
+      return supported_algos[hashalgo]
+   except:
+      raise Exception('unknown hash algorithm, please specify {}'.format(', '.join(supported_algos.keys())))
 
 def main(args):
    with open(args.csr, 'r') as f:
@@ -77,7 +79,7 @@ if __name__ == '__main__':
    parser.add_argument('csr', help="Source CSR (can be signed with any key)")
    parser.add_argument('--keyid', action='store', dest='keyid', help='key ID in AWS KMS')
    parser.add_argument('--region', action='store', dest='region', help='AWS region')
-   parser.add_argument('--hashalgo', choices=['rsasha256', 'rsasha512', 'ecsha256', 'ecsha384'], default="sha256", help='hash algorithm to choose')
+   parser.add_argument('--hashalgo', choices=['rsa-sha256', 'rsa-sha512', 'ecdsa-sha256', 'ecdsa-sha384', 'ecdsa-sha512'], default="rsa-sha256", help='hash algorithm to choose')
    args = parser.parse_args()
    main(args)
 
