@@ -34,10 +34,14 @@ def output_csr(csr):
    print(end_marker)
 
 def signing_algorithm(hashalgo):
-   if hashalgo == 'sha512':
-      return 'RSASSA_PKCS1_V1_5_SHA_512', '1.2.840.113549.1.1.13'
-   elif hashalgo == 'sha256':
-      return 'RSASSA_PKCS1_V1_5_SHA_256', '1.2.840.113549.1.1.11'
+   if hashalgo == 'rsasha512': # szOID_RSA_SHA512RSA
+      return 'RSASSA_PKCS1_V1_5_SHA_512', '1.2.840.113549.1.1.13', 'sha512'
+   elif hashalgo == 'rsasha256': # szOID_RSA_SHA256RSA
+      return 'RSASSA_PKCS1_V1_5_SHA_256', '1.2.840.113549.1.1.11', 'sha256'
+   elif hashalgo == 'ecsha256': # szOID_ECDSA_SHA256
+      return 'ECDSA_SHA_256', '1.2.840.10045.4.3.2', 'sha256'
+   elif hashalgo == 'ecsha384': # szOID_ECDSA_SHA384
+      return 'ECDSA_SHA_384', '1.2.840.10045.4.3.3', 'sha384'
    else:
       raise Exception('unknown hash algorithm, please specify either sha256 or sha512')
 
@@ -58,11 +62,12 @@ def main(args):
    pubkey_der = response['PublicKey']
    csr['certificationRequestInfo']['subjectPKInfo'] = decoder.decode(pubkey_der, pyasn1_modules.rfc2314.SubjectPublicKeyInfo())[0]
    
-   signatureBytes = sign_certification_request_info(kms, args.keyid, csr, args.hashalgo, signing_algorithm(args.hashalgo)[0])
+   algo = signing_algorithm(args.hashalgo)
+   signatureBytes = sign_certification_request_info(kms, args.keyid, csr, algo[2], algo[0])
    csr.setComponentByName('signature', univ.BitString.fromOctetString(signatureBytes))
 
    sigAlgIdentifier = pyasn1_modules.rfc2314.SignatureAlgorithmIdentifier()
-   sigAlgIdentifier.setComponentByName('algorithm', univ.ObjectIdentifier(signing_algorithm(args.hashalgo)[1]))
+   sigAlgIdentifier.setComponentByName('algorithm', univ.ObjectIdentifier(algo[1]))
    csr.setComponentByName('signatureAlgorithm', sigAlgIdentifier)
 
    output_csr(csr)
@@ -72,7 +77,7 @@ if __name__ == '__main__':
    parser.add_argument('csr', help="Source CSR (can be signed with any key)")
    parser.add_argument('--keyid', action='store', dest='keyid', help='key ID in AWS KMS')
    parser.add_argument('--region', action='store', dest='region', help='AWS region')
-   parser.add_argument('--hashalgo', choices=['sha256', 'sha512'], default="sha256", help='hash algorithm to choose')
+   parser.add_argument('--hashalgo', choices=['rsasha256', 'rsasha512', 'ecsha256', 'ecsha384'], default="sha256", help='hash algorithm to choose')
    args = parser.parse_args()
    main(args)
 
